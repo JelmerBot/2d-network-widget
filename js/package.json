@@ -50,6 +50,8 @@
     "d3-scale": "^3.3.0",
     "d3-scale-chromatic": "^2.0.0",
     "d3-force": "^3.0.0",
+    "d3-delaunay": "^6.0.2",
+    "d3-transition":"^3.0.1",
     "lodash": "^4.17.4"
   },
   "jupyterlab": {

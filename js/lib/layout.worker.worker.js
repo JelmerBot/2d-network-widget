@@ -1626,7 +1626,6 @@ const layoutSim = (0,d3_force__WEBPACK_IMPORTED_MODULE_4__["default"])()
 
 function tick_function() {
   self.postMessage({
-    command: "tick",
     progress: iteration <= 1 ? 0 : iteration / totalIterations,
     nodes: nodes,
   });
@@ -1681,16 +1680,6 @@ function updateSettings(props) {
   repulsionForce.distanceMax(props.repulsionLimit);
 }
 
-function nodeAt({ x, y }, scale) {
-  const node = layoutSim.find(x, y);
-  const distance = Math.sqrt((node.x - x)**2 + (node.y - y)**2);
-  const nodeIdx = (distance / scale) <= node.r ? node.id : -1;
-  self.postMessage({
-    command: "nodeAt",
-    nodeIdx,
-  });
-}
-
 function dragNode(idx, { x, y }) {
   nodes[idx].fx = x;
   nodes[idx].fy = y;
@@ -1734,9 +1723,6 @@ self.onmessage = (event) => {
     case "settings":
       updateSettings(message.settings);
       runSimulation(message.alpha);
-      break;
-    case "nodeAt":
-      nodeAt(message.pos, message.scale);
       break;
     case "drag":
       dragNode(message.nodeIdx, message.pos);

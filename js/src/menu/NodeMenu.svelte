@@ -65,7 +65,7 @@
   // --- Exported mapping object
   $: colorMapping = {
     title: enableColor ? colorColumn : null,
-    color: enableColor ? colorFunction : applyOpacity("skyblue", opacity),
+    color: enableColor ? colorFunction : () => applyOpacity("skyblue", opacity),
     scale: colorScale,
     type: colorType,
   };

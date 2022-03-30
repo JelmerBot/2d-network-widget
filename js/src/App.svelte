@@ -25,7 +25,6 @@
     {nodes}
     {edges}
     {nodeColorMapping}
-    {nodeSizeMapping}
     {edgeMapping}
     bind:viewScale
   />

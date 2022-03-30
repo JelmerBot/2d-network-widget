@@ -1,3 +1,4 @@
+import { applyOpacity } from "../menu/color.js";
 import { rgb } from "d3-color";
 
 // --- Drawing functions
@@ -5,15 +6,15 @@ export function drawFrame({
   canvas,
   ctx,
   nodes,
-  nodeColorMapping,
-  nodeSizeMapping,
   nodePositions,
+  nodeColorMapping,
+  activeNodeIds,
   progress,
   transform,
 }) {
   clear(canvas, ctx);
   translate(canvas, ctx, transform);
-  drawNodes(ctx, nodes, nodeColorMapping, nodeSizeMapping, nodePositions);
+  drawNodes(ctx, nodes, nodePositions, nodeColorMapping, activeNodeIds);
   drawProgress(ctx, progress);
 }
 
@@ -21,17 +22,17 @@ export function drawFinal({
   canvas,
   ctx,
   nodes,
-  edges,
-  nodeColorMapping,
-  nodeSizeMapping,
   nodePositions,
+  nodeColorMapping,
+  activeNodeIds,
+  edges,
   edgeMapping,
   transform,
 }) {
   clear(canvas, ctx);
   translate(canvas, ctx, transform);
   drawEdges(ctx, nodePositions, edges, edgeMapping);
-  drawNodes(ctx, nodes, nodeColorMapping, nodeSizeMapping, nodePositions);
+  drawNodes(ctx, nodes, nodePositions, nodeColorMapping, activeNodeIds);
 }
 
 // --- Helpers
@@ -46,29 +47,26 @@ function clear(canvas, ctx) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-function _draw_circle(ctx, node, pos, nodeSizeMapping) {
+function _draw_circle(ctx, node) {
   ctx.beginPath();
-  ctx.arc(pos.x, pos.y, nodeSizeMapping.size(node), 0, 2 * Math.PI);
+  ctx.arc(node.x, node.y, node.r, 0, 2 * Math.PI);
   ctx.fill();
 }
 
-function drawNodes(
-  ctx,
-  nodes,
-  nodeColorMapping,
-  nodeSizeMapping,
-  nodePositions
-) {
+function drawNodes(ctx, nodes, nodePositions, nodeColorMapping, activeNodeIds) {
   ctx.strokeStyle = "black";
-  if (nodeColorMapping.title) {
+  if (activeNodeIds.size === 0) {
     nodes.forEach((node, idx) => {
       ctx.fillStyle = nodeColorMapping.color(node);
-      _draw_circle(ctx, nodes[idx], nodePositions[idx], nodeSizeMapping);
+      _draw_circle(ctx, nodePositions[idx]);
     });
   } else {
-    ctx.fillStyle = nodeColorMapping.color;
-    nodes.forEach((_, idx) => {
-      _draw_circle(ctx, nodes[idx], nodePositions[idx], nodeSizeMapping);
+    nodes.forEach((node, idx) => {
+      ctx.fillStyle = applyOpacity(
+        nodeColorMapping.color(node),
+        !activeNodeIds.has(idx) ? 0.3 : 1
+      );
+      _draw_circle(ctx, nodePositions[idx]);
     });
   }
 }

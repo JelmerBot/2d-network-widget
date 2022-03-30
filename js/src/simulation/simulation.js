@@ -1,26 +1,10 @@
-import { worker } from "./worker.js";
+import { worker } from "../util/worker.js";
 import Worker from "./layout.worker.js";
 
 // --- Internal State
 let _enabled = true;
-let _promise = null;
-let _timeout = null;
-let _resolve = () => {};
 let _callback = () => {};
-const _worker = worker(new Worker(), (message) => {
-  switch (message.command) {
-    case "tick":
-      _callback(message);
-      break;
-    case "nodeAt":
-      if (_timeout) {
-        _resolve(message.nodeIdx);
-        clearInterval(_timeout);
-        _timeout = null;
-      }
-      break;
-  }
-});
+const _worker = worker(new Worker(), (message) => _callback(message));
 
 export const simulation = {
   nodes(nodes, alpha) {
@@ -57,24 +41,6 @@ export const simulation = {
       command: "enabled",
       alpha: _enabled ? alpha : 0,
     });
-  },
-  async nodeAt({ x, y }, scale) {
-    if (_promise) {
-      await _promise;
-    }
-    _promise = new Promise((resolve, reject) => {
-      _resolve = resolve;
-    });
-    _worker({
-      command: "nodeAt",
-      pos: { x, y },
-      scale,
-    });
-    _timeout = setTimeout(() => {
-      _resolve(-1);
-      _timeout = null;
-    }, 1000);
-    return _promise;
   },
   dragNode(idx, { x, y }, alpha) {
     _worker({
