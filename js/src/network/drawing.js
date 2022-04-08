@@ -8,13 +8,23 @@ export function drawFrame({
   nodes,
   nodePositions,
   nodeColorMapping,
-  activeNodeIds,
+  hoverNodeIds,
+  selectedNodeIds,
+  selectionPath,
   progress,
   transform,
 }) {
   clear(canvas, ctx);
   translate(canvas, ctx, transform);
-  drawNodes(ctx, nodes, nodePositions, nodeColorMapping, activeNodeIds);
+  drawNodes(
+    ctx,
+    nodes,
+    nodePositions,
+    nodeColorMapping,
+    hoverNodeIds,
+    selectedNodeIds
+  );
+  drawSelectionPath(ctx, selectionPath);
   drawProgress(ctx, progress);
 }
 
@@ -24,7 +34,9 @@ export function drawFinal({
   nodes,
   nodePositions,
   nodeColorMapping,
-  activeNodeIds,
+  hoverNodeIds,
+  selectedNodeIds,
+  selectionPath,
   edges,
   edgeMapping,
   transform,
@@ -32,7 +44,15 @@ export function drawFinal({
   clear(canvas, ctx);
   translate(canvas, ctx, transform);
   drawEdges(ctx, nodePositions, edges, edgeMapping);
-  drawNodes(ctx, nodes, nodePositions, nodeColorMapping, activeNodeIds);
+  drawNodes(
+    ctx,
+    nodes,
+    nodePositions,
+    nodeColorMapping,
+    hoverNodeIds,
+    selectedNodeIds
+  );
+  drawSelectionPath(ctx, selectionPath);
 }
 
 // --- Helpers
@@ -47,28 +67,29 @@ function clear(canvas, ctx) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-function _draw_circle(ctx, node) {
-  ctx.beginPath();
-  ctx.arc(node.x, node.y, node.r, 0, 2 * Math.PI);
-  ctx.fill();
-}
-
-function drawNodes(ctx, nodes, nodePositions, nodeColorMapping, activeNodeIds) {
+function drawNodes(
+  ctx,
+  nodes,
+  nodePositions,
+  nodeColorMapping,
+  hoverNodeIds,
+  selectedNodeIds
+) {
   ctx.strokeStyle = "black";
-  if (activeNodeIds.size === 0) {
-    nodes.forEach((node, idx) => {
-      ctx.fillStyle = nodeColorMapping.color(node);
-      _draw_circle(ctx, nodePositions[idx]);
-    });
-  } else {
-    nodes.forEach((node, idx) => {
-      ctx.fillStyle = applyOpacity(
-        nodeColorMapping.color(node),
-        !activeNodeIds.has(idx) ? 0.3 : 1
-      );
-      _draw_circle(ctx, nodePositions[idx]);
-    });
-  }
+  nodePositions.forEach((node, idx) => {
+    const baseColor =
+      selectedNodeIds.size == 0 || selectedNodeIds.has(idx)
+        ? nodeColorMapping.color(nodes[idx])
+        : rgb(195, 195, 195);
+    const opacityColor =
+      hoverNodeIds.size == 0 || hoverNodeIds.has(idx)
+        ? applyOpacity(baseColor, 1)
+        : applyOpacity(baseColor, 0.3);
+    ctx.fillStyle = opacityColor;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, node.r, 0, 2 * Math.PI);
+    ctx.fill();
+  });
 }
 
 function drawEdges(ctx, nodes, edges, edgeMapping) {
@@ -89,4 +110,17 @@ function drawProgress(ctx, progress) {
   ctx.fillStyle = rgb(27, 131, 233);
   ctx.beginPath();
   ctx.fillRect(0, 0, progress, 2);
+}
+
+function drawSelectionPath(ctx, selectionPath) {
+  if (selectionPath.length > 2) {
+    ctx.lineWidth = 0;
+    ctx.fillStyle = applyOpacity(rgb(27, 131, 233), 0.15);
+    ctx.beginPath();
+    ctx.moveTo(selectionPath[0][0], selectionPath[1][1]);
+    selectionPath.slice(1).forEach((point) => {
+      ctx.lineTo(point[0], point[1]);
+    });
+    ctx.fill();
+  }
 }

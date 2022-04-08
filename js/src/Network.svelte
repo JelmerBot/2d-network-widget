@@ -1,13 +1,13 @@
 <script>
+  import classifyPoint from "robust-point-in-polygon";
   import { scaleLinear } from "d3-scale";
   import { Delaunay } from "d3-delaunay";
   import { select } from "d3-selection";
-  import { drawFrame, drawFinal } from "./network/drawing";
   import { simulation } from "./simulation/simulation";
+  import { drawFrame, drawFinal } from "./network/drawing";
   import { neighbors } from "./network/neighbors";
-  import { drag, dragDisable } from "./deps/drag";
-  import { zoom, zoomIdentity } from "./deps/zoom";
-  import App from "./App.svelte";
+  import { drag, dragDisable } from "./network/drag";
+  import { zoom, zoomIdentity } from "./network/zoom";
 
   // --- Export props
   export let nodes = [];
@@ -18,35 +18,22 @@
 
   // --- Construct canvas
   const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
   canvas.width = 700;
   canvas.height = 700;
-  const ctx = canvas.getContext("2d");
 
   // --- Progress bar
   let progress = 1;
   const x_scale = scaleLinear().domain([1, 0]).range([0, canvas.width]);
 
   // --- Node encoding
-  const nodePositions = nodes.map((_) => {
-    return {
-      x: 0,
-      y: 0,
-      r: 0,
-    };
+  let nodePositions = nodes.map((_) => {
+    return { x: 0, y: 0, r: 0 };
   });
   simulation.onTick((message) => {
     progress = message.progress;
-    message.nodes.forEach((n, idx) => {
-      nodePositions[idx] = n;
-    });
+    nodePositions = message.nodes;
   });
-
-  // --- Neighbours
-  let neighborMap = null;
-  $: neighbors.edges(edges).then((map) => (neighborMap = map));
-  $: activeNodeIds = new Set(
-    neighborMap && mouseNode >= 0 ? [mouseNode, ...neighborMap[mouseNode]] : []
-  );
 
   // --- Zoom interaction
   let dragging = false;
@@ -64,30 +51,32 @@
   // --- Hover interaction
   let mousePos = [0, 0];
   let mouseNode = -1;
+  let neighborMap = null;
+  $: neighbors.edges(edges).then((map) => (neighborMap = map));
   $: delaunay = Delaunay.from(
     nodePositions,
     (d) => d.x,
     (d) => d.y
   );
-  $: mouseNode = nodeAtMouse(
-    mousePos,
-    transform,
-    nodePositions,
-    delaunay,
-    dragging
+  $: if (!dragging) {
+    mouseNode = nodeAtMouse(mousePos, transform, nodePositions, delaunay);
+  }
+  $: hoverNodeIds = new Set(
+    neighborMap && mouseNode >= 0 ? [mouseNode, ...neighborMap[mouseNode]] : []
   );
 
-  function nodeAtMouse(mouse, transform, encoding, delaunay, dragging) {
-    if (dragging) {
-      return mouseNode;
-    }
+  function invertTransform(mouse_x, mouse_y, transform) {
+    const worldPos = transform.invert([mouse_x, mouse_y]);
+    return [worldPos[0] - canvas.width / 2, worldPos[1] - canvas.height / 2];
+  }
+
+  function nodeAtMouse(mouse, transform, encoding, delaunay) {
     const { x: offset_x, y: offset_y } = canvas.getBoundingClientRect();
-    const [mouse_x, mouse_y] = mouse;
-    const worldPos = transform.invert([mouse_x - offset_x, mouse_y - offset_y]);
-    const [view_x, view_y] = [
-      worldPos[0] - canvas.width / 2,
-      worldPos[1] - canvas.height / 2,
-    ];
+    const [view_x, view_y] = invertTransform(
+      mouse[0] - offset_x,
+      mouse[1] - offset_y,
+      transform
+    );
     const idx = delaunay.find(view_x, view_y, Math.max(mouseNode, 0));
     const node = encoding[idx];
     const dist = Math.sqrt((node.x - view_x) ** 2 + (node.y - view_y) ** 2);
@@ -101,16 +90,9 @@
   const alpha = 0.3;
   const _drag = drag()
     .container(canvas)
-    .on("start", (_) => {
-      dragging = true;
-    })
+    .on("start", (_) => (dragging = true))
     .on("drag", (event) => {
-      const { x: mouse_x, y: mouse_y } = event;
-      const worldPos = transform.invert([mouse_x, mouse_y]);
-      const [view_x, view_y] = [
-        worldPos[0] - canvas.width / 2,
-        worldPos[1] - canvas.height / 2,
-      ];
+      const [view_x, view_y] = invertTransform(event.x, event.y, transform);
       simulation.dragNode(mouseNode, { x: view_x, y: view_y }, alpha);
     })
     .on("end", (_) => {
@@ -118,7 +100,44 @@
       dragging = false;
     });
 
-  // --- Event handles
+  // --- Lasso Selection
+  const closingDistance = 100;
+  let selectionPath = [];
+  let selectionOrigin = [0, 0];
+  let selectedNodeIds = new Set([]);
+
+  const _lasso = drag()
+    .container(canvas)
+    .on("start", (event) => {
+      dragging = true;
+      selectionPath = [];
+      selectionOrigin = [event.x, event.y];
+      selectedNodeIds = new Set([]);
+    })
+    .on("drag", (event) => {
+      const [view_x, view_y] = invertTransform(event.x, event.y, transform);
+      selectionPath = [...selectionPath, [view_x, view_y]];
+    })
+    .on("end", (event) => {
+      const distance = Math.sqrt(
+        (selectionOrigin[0] - event.x) ** 2 +
+          (selectionOrigin[1] - event.y) ** 2
+      );
+      if (selectionPath.length > 2 && distance <= closingDistance) {
+        selectedNodeIds = new Set(
+          nodePositions.reduce((agg, node, idx) => {
+            if (classifyPoint(selectionPath, [node.x, node.y]) < 0) {
+              agg.push(idx);
+            }
+            return agg;
+          }, [])
+        );
+      }
+      selectionPath = [];
+      dragging = false;
+    });
+
+  // --- Event handles action
   function interact(element) {
     function _filter(event) {
       return (!event.ctrlKey || event.type === "wheel") && !event.button;
@@ -128,7 +147,9 @@
       if (!_filter(event)) {
         return;
       }
-      if (mouseNode >= 0) {
+      if (event.shiftKey) {
+        _lasso.mousedowned.bind(this)(event);
+      } else if (mouseNode >= 0) {
         _drag.mousedowned.bind(this)(event);
       } else {
         _zoom.mousedowned.bind(this)(event);
@@ -174,7 +195,6 @@
   }
 
   // --- Animation
-  // Request renders when stuff changes.
   $: if (edgeMapping) {
     const draw = progress === 0 ? drawFinal : drawFrame;
     window.requestAnimationFrame(() =>
@@ -184,7 +204,9 @@
         nodes,
         nodePositions,
         nodeColorMapping,
-        activeNodeIds,
+        hoverNodeIds,
+        selectedNodeIds,
+        selectionPath,
         edges,
         edgeMapping,
         transform,
