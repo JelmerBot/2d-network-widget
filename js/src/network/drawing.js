@@ -8,8 +8,8 @@ export function drawFrame({
   nodes,
   nodePositions,
   nodeColorMapping,
-  hoverNodeIds,
-  selectedNodeIds,
+  hoverNodes,
+  selectedNodes,
   selectionPath,
   progress,
   transform,
@@ -21,8 +21,8 @@ export function drawFrame({
     nodes,
     nodePositions,
     nodeColorMapping,
-    hoverNodeIds,
-    selectedNodeIds
+    hoverNodes,
+    selectedNodes
   );
   drawSelectionPath(ctx, selectionPath);
   drawProgress(ctx, progress);
@@ -34,8 +34,8 @@ export function drawFinal({
   nodes,
   nodePositions,
   nodeColorMapping,
-  hoverNodeIds,
-  selectedNodeIds,
+  hoverNodes,
+  selectedNodes,
   selectionPath,
   edges,
   edgeMapping,
@@ -49,8 +49,8 @@ export function drawFinal({
     nodes,
     nodePositions,
     nodeColorMapping,
-    hoverNodeIds,
-    selectedNodeIds
+    hoverNodes,
+    selectedNodes
   );
   drawSelectionPath(ctx, selectionPath);
 }
@@ -72,22 +72,24 @@ function drawNodes(
   nodes,
   nodePositions,
   nodeColorMapping,
-  hoverNodeIds,
-  selectedNodeIds
+  hoverNodes,
+  selectedNodes
 ) {
   ctx.strokeStyle = "black";
+  ctx.lineWidth = 0.1;
   nodePositions.forEach((node, idx) => {
     const baseColor =
-      selectedNodeIds.size == 0 || selectedNodeIds.has(idx)
+      selectedNodes.size == 0 || selectedNodes.has(idx)
         ? nodeColorMapping.color(nodes[idx])
-        : rgb(195, 195, 195);
+        : "#ccd7d7";
     const opacityColor =
-      hoverNodeIds.size == 0 || hoverNodeIds.has(idx)
+      hoverNodes.size == 0 || hoverNodes.has(idx)
         ? applyOpacity(baseColor, 1)
         : applyOpacity(baseColor, 0.3);
     ctx.fillStyle = opacityColor;
     ctx.beginPath();
     ctx.arc(node.x, node.y, node.r, 0, 2 * Math.PI);
+    ctx.stroke();
     ctx.fill();
   });
 }

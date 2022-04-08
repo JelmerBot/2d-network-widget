@@ -30,6 +30,10 @@
     "watch:svelte": "webpack -c ./webpack.svelte.config.js --watch --mode=development",
     "watch:widget": "webpack -c ./webpack.widget.config.js --watch --mode=development",
     "watch:labextension": "jupyter labextension watch --development True .",
+    "watch:prod": "npm-run-all --parallel watch:svelte:prod watch:widget:prod watch:labextension:prod",
+    "watch:svelte:prod": "webpack -c ./webpack.svelte.config.js --watch --mode=production",
+    "watch:widget:prod": "webpack -c ./webpack.widget.config.js --watch --mode=production",
+    "watch:labextension:prod": "jupyter labextension watch .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {

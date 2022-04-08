@@ -12,9 +12,10 @@
   // --- Export props
   export let nodes = [];
   export let edges = [];
-  export let nodeColorMapping = null;
-  export let edgeMapping = null;
+  export let nodeColorMapping;
+  export let edgeMapping;
   export let viewScale = 1;
+  export let selectedNodes;
 
   // --- Construct canvas
   const canvas = document.createElement("canvas");
@@ -61,7 +62,7 @@
   $: if (!dragging) {
     mouseNode = nodeAtMouse(mousePos, transform, nodePositions, delaunay);
   }
-  $: hoverNodeIds = new Set(
+  $: hoverNodes = new Set(
     neighborMap && mouseNode >= 0 ? [mouseNode, ...neighborMap[mouseNode]] : []
   );
 
@@ -104,7 +105,6 @@
   const closingDistance = 100;
   let selectionPath = [];
   let selectionOrigin = [0, 0];
-  let selectedNodeIds = new Set([]);
 
   const _lasso = drag()
     .container(canvas)
@@ -112,7 +112,7 @@
       dragging = true;
       selectionPath = [];
       selectionOrigin = [event.x, event.y];
-      selectedNodeIds = new Set([]);
+      selectedNodes = [];
     })
     .on("drag", (event) => {
       const [view_x, view_y] = invertTransform(event.x, event.y, transform);
@@ -124,14 +124,12 @@
           (selectionOrigin[1] - event.y) ** 2
       );
       if (selectionPath.length > 2 && distance <= closingDistance) {
-        selectedNodeIds = new Set(
-          nodePositions.reduce((agg, node, idx) => {
-            if (classifyPoint(selectionPath, [node.x, node.y]) < 0) {
-              agg.push(idx);
-            }
-            return agg;
-          }, [])
-        );
+        selectedNodes = nodePositions.reduce((agg, node, idx) => {
+          if (classifyPoint(selectionPath, [node.x, node.y]) < 0) {
+            agg.push(idx);
+          }
+          return agg;
+        }, []);
       }
       selectionPath = [];
       dragging = false;
@@ -204,8 +202,8 @@
         nodes,
         nodePositions,
         nodeColorMapping,
-        hoverNodeIds,
-        selectedNodeIds,
+        hoverNodes,
+        selectedNodes: new Set(selectedNodes),
         selectionPath,
         edges,
         edgeMapping,

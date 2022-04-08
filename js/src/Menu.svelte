@@ -11,9 +11,10 @@
   // --- Component props
   export let nodes = [];
   export let edges = [];
-  export let nodeColorMapping = null;
-  export let nodeSizeMapping = null;
-  export let edgeMapping = null;
+  export let selectedNodes;
+  export let nodeColorMapping;
+  export let nodeSizeMapping;
+  export let edgeMapping;
 
   // --- Menu state
   let visible = ""; // can be set to: '', 'node', 'edge', 'layout'.
@@ -27,6 +28,7 @@
 <!-- Scripts need to run even when they are not visible -->
 <NodeMenu
   {nodes}
+  {selectedNodes}
   bind:colorMapping={nodeColorMapping}
   bind:sizeMapping={nodeSizeMapping}
   bind:visible

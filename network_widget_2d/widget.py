@@ -23,12 +23,13 @@ class Widget2D(widgets.DOMWidget):
             }
         )
     ).tag(sync=True)
+    selectedNodes = List(Integer()).tag(sync=True)
 
     def __init__(self, node_data, network):
         super().__init__()
-        tmp = node_data.reset_index().rename(columns={'id': 'label'})
-        tmp['id'] = list(range(tmp.shape[0]))
-        self.nodes = tmp.to_dict(orient='records')
+        tmp = node_data.reset_index().rename(columns={"id": "label"})
+        tmp["id"] = list(range(tmp.shape[0]))
+        self.nodes = tmp.to_dict(orient="records")
         self.show(network)
 
     def show(self, network):

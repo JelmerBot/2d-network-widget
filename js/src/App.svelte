@@ -12,11 +12,20 @@
   model.on("change:edges", () => {
     edges = model.get("edges");
   });
+  let selectedNodes = model.get("selectedNodes");
+  model.on("change:selectedNodes", () => {
+    console.log("update selectedNodes");
+    selectedNodes = model.get("selectedNodes");
+  });
+  $: {
+    model.set("selectedNodes", selectedNodes);
+    model.save_changes();
+  }
 
   // --- Mapping
-  let nodeColorMapping = null;
-  let nodeSizeMapping = null;
-  let edgeMapping = null;
+  let nodeColorMapping;
+  let nodeSizeMapping;
+  let edgeMapping;
   let viewScale = 1;
 </script>
 
@@ -27,10 +36,12 @@
     {nodeColorMapping}
     {edgeMapping}
     bind:viewScale
+    bind:selectedNodes
   />
   <Menu
     {nodes}
     {edges}
+    {selectedNodes}
     bind:nodeColorMapping
     bind:nodeSizeMapping
     bind:edgeMapping

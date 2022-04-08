@@ -1,20 +1,21 @@
 <script>
   import { mean, extent } from "d3-array";
   import { scaleSqrt } from "d3-scale";
-  import { applyOpacity, colormapFactories } from "./color.js";
+  import { colormapFactories } from "./color.js";
 
   // --- Component properties
   export let nodes = [];
+  export let selectedNodes;
   export let visible;
   export let send;
   export let receive;
-  export let colorMapping = null;
-  export let sizeMapping = null;
+  export let colorMapping;
+  export let sizeMapping;
 
   const columns = Object.keys(nodes[0]);
 
   // --- Opacity state
-  let opacity = 1;
+  // let opacity = 1;
 
   // --- Internal color state
   let enableColor = false;
@@ -24,8 +25,7 @@
   $: isCategoricalColorType = colorType === "cat";
   $: colorMapOptions = Object.keys(colormapFactories[colorType]);
   let colorMapName = "Viridis";
-  $: colorMapName =
-    colorType === "seq" ? "Viridis" : Object.keys(colorMapOptions)[0];
+  $: colorMapName = _color_scale(colorType);
   $: colorScale = colormapFactories[colorType][colorMapName]();
   let colorDomainMin = 0;
   let colorDomainMax = 1;
@@ -52,9 +52,16 @@
       ]);
       break;
   }
-  $: colorFunction = (d) => applyOpacity(colorScale(d[colorColumn]), opacity);
+  $: defaultColor = colorScale(colorDomainMin);
+  $: colorFunction = (d) => colorScale(d[colorColumn]);
   // Separate functions needed so that Svelte detects which variables it needs
   // to monitor...
+  function _color_scale(colorType) {
+    console.log("change scale", colorType);
+    return colorType === "seq"
+      ? "Viridis"
+      : Object.keys(colormapFactories[colorType])[0];
+  }
   function _color_domain(isCategoricalColorType, column) {
     return !isCategoricalColorType ? extent(nodes, (d) => d[column]) : [0, 1];
   }
@@ -65,7 +72,7 @@
   // --- Exported mapping object
   $: colorMapping = {
     title: enableColor ? colorColumn : null,
-    color: enableColor ? colorFunction : () => applyOpacity("skyblue", opacity),
+    color: enableColor ? colorFunction : () => defaultColor,
     scale: colorScale,
     type: colorType,
   };
@@ -167,8 +174,8 @@
       />
     </div>
 
-    <span>Opacity:</span>
-    <input type="range" min="0" max="1" step="0.01" bind:value={opacity} />
+    <!-- <span>Opacity:</span>
+    <input type="range" min="0" max="1" step="0.01" bind:value={opacity} /> -->
 
     <div class="row">
       <b class="half">Size</b>
