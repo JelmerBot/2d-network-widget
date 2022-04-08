@@ -80,7 +80,7 @@
     const idx = delaunay.find(view_x, view_y, Math.max(mouseNode, 0));
     const node = encoding[idx];
     const dist = Math.sqrt((node.x - view_x) ** 2 + (node.y - view_y) ** 2);
-    if (dist < transform.k * node.r) {
+    if (dist < node.r) {
       return idx;
     }
     return -1;
