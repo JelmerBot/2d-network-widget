@@ -1,6 +1,7 @@
 # force_networks
 
-A force directed network visualization widget for Jupyter Lab
+A force directed network visualization widget for Jupyter Lab. Draws
+network using canvas. Computes force layouts with d3-force.
 
 ## Installation
 
